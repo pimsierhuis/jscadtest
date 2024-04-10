@@ -5,7 +5,19 @@ const { hull, hullChain } = require('@jscad/modeling').hulls
 const { intersect, subtract, union } = require('@jscad/modeling').booleans
 const { measureArea, measureBoundingBox, measureVolume, measureAggregateBoundingBox } = require('@jscad/modeling').measurements
 const { toPoints } = require('@jscad/modeling').geometries.geom2
+const { vectorText } = jscad.text
 
+const createTextShape = (message, pointShape) => {
+    const lineSegmentPointArrays = vectorText({ x: 0, y: 0, input: message, height:2 }) // line segments for each character
+  
+    const lineSegments = []
+    lineSegmentPointArrays.forEach((segmentPoints) => { // process the line segment
+      const corners = segmentPoints.map((point) => translate(point, pointShape))
+      lineSegments.push(hullChain(corners))
+    })
+    return union(lineSegments)
+  }
+  
 
 /**
 * Construct a pyramid consisting of two connected rectangles above each other (called base and top)
@@ -49,6 +61,21 @@ const flat_pyramid = (options) => {
     return polyhedron({points: points, faces: faces, orientation: 'outward'})
 }
 
+/* Dit kan ook met slices. Toen ik dit maakte had ik de voorbeelden nog niet gevonden....
+  const example = (height) => {
+    return extrudeFromSlices(
+      {
+        numberOfSlices: 2,
+        callback: (progress, count, base) => {
+          let myshape = roundedRectangle({size: [20 - progress*10, 20 - progress*10], roundRadius: 2})
+          let newSlice = slice.fromSides(geom2.toSides(myshape))
+          newSlice = slice.transform(mat4.fromTranslation(mat4.create(), [0, 0, progress * height]), newSlice)
+          return newSlice
+        }
+      }, geom2.create()
+    )
+  }
+*/
 function hull2d(shape_top, shape_bottom, height) {
 
     const points_top = toPoints(shape_top).map((p) => [p[0], p[1], height])
@@ -228,4 +255,4 @@ const round_edge2 = (shape, r) => {
 }
 
 
-module.exports = { flat_pyramid, alignTo, hull2d }
+module.exports = { flat_pyramid, alignTo, hull2d, createTextShape }

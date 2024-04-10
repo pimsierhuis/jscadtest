@@ -6,7 +6,7 @@ const { intersect, subtract, union } = require('@jscad/modeling').booleans
 const { measureArea, measureBoundingBox, measureVolume, measureAggregateBoundingBox } = require('@jscad/modeling').measurements
 const { toPoints } = require('@jscad/modeling').geometries.geom2
 const { vectorChar, vectorText } = require('@jscad/modeling').text
-const { alignTo, flat_pyramid, hull2d } = require('./util.js')
+const { alignTo, flat_pyramid, hull2d, createTextShape } = require('./util.js')
 
 
 const switch_size = 6.3 // Assumed to be smaller than button_base_size
@@ -25,8 +25,8 @@ const button_coverhole_margin_width = 0.6
 const button_coverhole_margin_height = 0.6
 const panel_round_radius = 4
 const panel_height = 5.5
-const panel_width = 120
-const panel_depth = 90
+const panel_width = 150
+const panel_depth = 100
 // const panel_width = 30
 // const panel_depth = 30
 const cover_height = 2.0
@@ -39,7 +39,7 @@ const screw_hole_cover_radius = 1.6
 
 
 
-function button() {
+function button(label) {
 
     const shape_top = roundedRectangle({size: [button_top_size,button_top_size], roundRadius: button_round_radius})
     const button_top = hull2d(shape_top, shape_top, button_total_height - button_flenge_height)
@@ -53,7 +53,14 @@ function button() {
         height:button_hole_height,
         radius:button_hole_radius})
 
-    return subtract(button, alignTo({z:'min'}, hole, button))
+    const completeButton = subtract(button, alignTo({z:'min'}, hole, button))
+    if (label == 1) {
+        return completeButton
+    } else {
+        const text = alignTo({z:['min','max'], x: 'center', y:'center'}, createTextShape(label, cylinder({height:0.4, radius:0.25})), completeButton)
+
+        return union(completeButton, text)
+    }
 }
 
 function button_hole() {
@@ -87,33 +94,34 @@ function screw_hole_cover () {
     return cylinder({height:screw_hole_cover_height, radius:screw_hole_cover_radius})
 }
 
-function repeat_on_screw_hole_locations(shape) {
+function repeat_on_screw_hole_locations(shapefunc) {
     const r = rectangle({size:[panel_width - screw_hole_margin_x*2, panel_depth - screw_hole_margin_y*2]})
     const locations = toPoints(r)
-    return repeat_on_locations(shape, locations)
+    return repeat_on_locations(shapefunc, locations)
 }
 
-function repeat_on_button_locations(shape) {
+function repeat_on_button_locations(shapefunc) {
     const locations = to_physical_locations(button_logical_locations(), button_spacing)
-    return repeat_on_locations(shape, locations)
+    return repeat_on_locations(shapefunc, locations)
 }
 
-function repeat_on_locations(shape, locations) {
-    const holes = []
+function repeat_on_locations(shapefunc, locations) {
+    const shapes = []
 
     for (let location of locations) {
-        holes.push(translate([location[0], location[1], 0], shape))
+        const shape = shapefunc(location[2])
+        shapes.push(translate([location[0], location[1], 0], shape))
     }
 
-    return holes
+    return shapes
 }
 
 function panel() {
 
     const shape = roundedRectangle({size: [panel_width, panel_depth], roundRadius: panel_round_radius})
     const result = hull2d(shape, shape, panel_height)
-    const aligned_switch_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_button_locations(tactile_switch_hole()), result)
-    const aligned_screwholes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_screw_hole_locations(screw_hole_panel()), result)
+    const aligned_switch_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_button_locations(() => tactile_switch_hole()), result)
+    const aligned_screwholes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_screw_hole_locations(() => screw_hole_panel()), result)
     return subtract(result, aligned_switch_holes, aligned_screwholes)
 }
 
@@ -122,14 +130,14 @@ function cover() {
     const shape = roundedRectangle({size: [panel_width, panel_depth], roundRadius: panel_round_radius})
     const result = hull2d(shape, shape, cover_height)
 
-    const aligned_button_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['min', 'min']}, repeat_on_button_locations(button_hole()), result)
-    const aligned_screw_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_screw_hole_locations(screw_hole_cover()), result)
+    const aligned_button_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['min', 'min']}, repeat_on_button_locations(() => button_hole()), result)
+    const aligned_screw_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_screw_hole_locations(() => screw_hole_cover()), result)
     return subtract(result, aligned_button_holes, aligned_screw_holes)
 }
 
 function buttons() {
     const panel_to_align_to = cuboid({size:[panel_width,panel_depth,panel_height]})
-    const aligned_buttons = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_button_locations(button()), panel_to_align_to)
+    const aligned_buttons = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_button_locations((label) => button(label)), panel_to_align_to)
 
     return aligned_buttons
 }
@@ -147,7 +155,7 @@ function to_physical_locations(logical_locations, spacing) {
         for (let col = 0; col < cols; col++) {
             const x = col * spacing
             if (logical_locations[row][col] != 0) {
-                locations.push([x,y])
+                locations.push([x,y, logical_locations[row][col]])
             }
         }
     }
@@ -157,12 +165,12 @@ function to_physical_locations(logical_locations, spacing) {
 
 function button_logical_locations() {
     return [
-        [1,0,0,1,0],
-        [1,0,1,0,1],
-        [1,0,0,1,0],
-        [1,0,0,0,0]]
+        ['Home',      1,0,0,1     ,0],
+        ['Start\njob',1,0,1,'Zero',1],
+        ['Res\nume',  1,0,0,1     ,0],
+        ['Pause',     1,0,0,0     ,0]]
 
-    // return [[1]]
+    // return [['Home']]
 }
 
 
