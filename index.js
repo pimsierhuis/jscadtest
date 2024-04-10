@@ -130,7 +130,9 @@ function panel() {
     const locations = toPoints(r)
     const aligned_screwholes_panel_machine = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_locations(() => screw_hole_panel(), locations), result)
     
-    return subtract(result, aligned_switch_holes, aligned_screwholes, aligned_screwholes_panel_machine)
+    const microcontroller_hole = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, screw_hole_panel(), result)
+    
+    return subtract(result, aligned_switch_holes, aligned_screwholes, aligned_screwholes_panel_machine, microcontroller_hole)
 }
 
 
