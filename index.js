@@ -23,19 +23,22 @@ const button_hole_radius = 1.7
 const button_spacing = button_base_size + 2
 const button_coverhole_margin_width = 0.6
 const button_coverhole_margin_height = 0.6
-const panel_round_radius = 4
+const panel_round_radius = 1
 const panel_height = 5.5
 const panel_width = 150
 const panel_depth = 100
 // const panel_width = 30
 // const panel_depth = 30
 const cover_height = 2.0
-const screw_hole_margin_x = 5
+const screw_hole_margin_x = 10
 const screw_hole_margin_y = 5
 const screw_hole_panel_height = 5.5
 const screw_hole_panel_radius = 2.3
 const screw_hole_cover_height = cover_height
 const screw_hole_cover_radius = 1.6
+
+const screw_hole_panel_machine_rect_width = 143.8
+const screw_hole_panel_machine_rect_depth = 93.7
 
 
 
@@ -122,7 +125,12 @@ function panel() {
     const result = hull2d(shape, shape, panel_height)
     const aligned_switch_holes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_button_locations(() => tactile_switch_hole()), result)
     const aligned_screwholes = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_screw_hole_locations(() => screw_hole_panel()), result)
-    return subtract(result, aligned_switch_holes, aligned_screwholes)
+
+    const r = rectangle({size:[screw_hole_panel_machine_rect_width, screw_hole_panel_machine_rect_depth]})
+    const locations = toPoints(r)
+    const aligned_screwholes_panel_machine = alignTo({x:['center', 'center'], y: ['center', 'center'], z: ['max', 'max']}, repeat_on_locations(() => screw_hole_panel(), locations), result)
+    
+    return subtract(result, aligned_switch_holes, aligned_screwholes, aligned_screwholes_panel_machine)
 }
 
 
