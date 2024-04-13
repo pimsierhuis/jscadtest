@@ -14,11 +14,11 @@ const switch_height = 3.8
 const pin_size = 1
 const pin_height = 7
 const button_total_height = 3
-const button_flenge_height = 1
+const button_flenge_height = 0.8
 const button_base_size = 18
 const button_top_size = button_base_size - 4; // 2mm flenge
 const button_round_radius = 3
-const button_hole_height = 0.4
+const button_hole_height = 0.6
 const button_hole_radius = 1.7
 const button_spacing = button_base_size + 2
 const button_coverhole_margin_width = 0.6
@@ -174,13 +174,14 @@ function to_physical_locations(logical_locations, spacing) {
 }
 
 function button_logical_locations() {
-    return [
+     return [
         ['Home',      1,0,0,1     ,0],
         ['Start\njob',1,0,1,'Zero',1],
         ['Res\nume',  1,0,0,1     ,0],
-        ['Pause',     1,0,0,0     ,0]]
-
+        ['Pause',     1,0,0,0     ,0]
+     ]
     // return [['Home']]
+    // return [[1]]
 }
 
 
